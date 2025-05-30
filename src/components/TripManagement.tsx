@@ -8,7 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, MapPin, Calendar, Users, Car, User } from 'lucide-react';
+import { Plus, MapPin, Calendar, Users, Car, User, X, UserPlus } from 'lucide-react';
+
+interface Passenger {
+  id: string;
+  name: string;
+  idProof: string;
+  phone: string;
+}
 
 const TripManagement = () => {
   const { toast } = useToast();
@@ -19,7 +26,13 @@ const TripManagement = () => {
     origin: '',
     destination: '',
     dateTime: '',
-    passengers: []
+    passengers: [] as Passenger[]
+  });
+
+  const [newPassenger, setNewPassenger] = useState({
+    name: '',
+    idProof: '',
+    phone: ''
   });
 
   // Mock data
@@ -58,6 +71,41 @@ const TripManagement = () => {
     }
   ];
 
+  const addPassenger = () => {
+    if (!newPassenger.name || !newPassenger.idProof || !newPassenger.phone) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all passenger details.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const passenger: Passenger = {
+      id: Date.now().toString(),
+      ...newPassenger
+    };
+
+    setNewTrip({
+      ...newTrip,
+      passengers: [...newTrip.passengers, passenger]
+    });
+
+    setNewPassenger({ name: '', idProof: '', phone: '' });
+
+    toast({
+      title: "Passenger Added",
+      description: `${passenger.name} has been added to the trip.`,
+    });
+  };
+
+  const removePassenger = (passengerId: string) => {
+    setNewTrip({
+      ...newTrip,
+      passengers: newTrip.passengers.filter(p => p.id !== passengerId)
+    });
+  };
+
   const handleCreateTrip = () => {
     if (!newTrip.vehicleId || !newTrip.driverId || !newTrip.origin || !newTrip.destination) {
       toast({
@@ -70,7 +118,7 @@ const TripManagement = () => {
 
     toast({
       title: "Trip Created",
-      description: "New trip has been successfully created.",
+      description: `New trip has been successfully created with ${newTrip.passengers.length} passengers.`,
     });
 
     setIsDialogOpen(false);
@@ -82,6 +130,7 @@ const TripManagement = () => {
       dateTime: '',
       passengers: []
     });
+    setNewPassenger({ name: '', idProof: '', phone: '' });
   };
 
   return (
@@ -98,14 +147,15 @@ const TripManagement = () => {
               Create Trip
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Trip</DialogTitle>
               <DialogDescription>
-                Fill in the trip details to create a new journey.
+                Fill in the trip details and add passengers for the journey.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {/* Vehicle Selection */}
               <div className="space-y-2">
                 <Label htmlFor="vehicle">Vehicle</Label>
                 <Select onValueChange={(value) => setNewTrip({...newTrip, vehicleId: value})}>
@@ -121,6 +171,8 @@ const TripManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Driver Selection */}
               <div className="space-y-2">
                 <Label htmlFor="driver">Driver</Label>
                 <Select onValueChange={(value) => setNewTrip({...newTrip, driverId: value})}>
@@ -136,24 +188,29 @@ const TripManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="origin">Origin</Label>
-                <Input
-                  id="origin"
-                  value={newTrip.origin}
-                  onChange={(e) => setNewTrip({...newTrip, origin: e.target.value})}
-                  placeholder="Starting location"
-                />
+
+              {/* Trip Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="origin">Origin</Label>
+                  <Input
+                    id="origin"
+                    value={newTrip.origin}
+                    onChange={(e) => setNewTrip({...newTrip, origin: e.target.value})}
+                    placeholder="Starting location"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="destination">Destination</Label>
+                  <Input
+                    id="destination"
+                    value={newTrip.destination}
+                    onChange={(e) => setNewTrip({...newTrip, destination: e.target.value})}
+                    placeholder="End location"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="destination">Destination</Label>
-                <Input
-                  id="destination"
-                  value={newTrip.destination}
-                  onChange={(e) => setNewTrip({...newTrip, destination: e.target.value})}
-                  placeholder="End location"
-                />
-              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="datetime">Date & Time</Label>
                 <Input
@@ -162,6 +219,65 @@ const TripManagement = () => {
                   value={newTrip.dateTime}
                   onChange={(e) => setNewTrip({...newTrip, dateTime: e.target.value})}
                 />
+              </div>
+
+              {/* Passenger Section */}
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Passengers</Label>
+                  <Badge variant="secondary">{newTrip.passengers.length} added</Badge>
+                </div>
+
+                {/* Add New Passenger */}
+                <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
+                  <Label className="text-sm font-medium">Add Passenger</Label>
+                  <div className="grid grid-cols-1 gap-3">
+                    <Input
+                      placeholder="Full Name"
+                      value={newPassenger.name}
+                      onChange={(e) => setNewPassenger({...newPassenger, name: e.target.value})}
+                    />
+                    <Input
+                      placeholder="ID Proof (Aadhar/Passport)"
+                      value={newPassenger.idProof}
+                      onChange={(e) => setNewPassenger({...newPassenger, idProof: e.target.value})}
+                    />
+                    <Input
+                      placeholder="Phone Number"
+                      value={newPassenger.phone}
+                      onChange={(e) => setNewPassenger({...newPassenger, phone: e.target.value})}
+                    />
+                  </div>
+                  <Button onClick={addPassenger} size="sm" className="w-full">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Add Passenger
+                  </Button>
+                </div>
+
+                {/* Passenger List */}
+                {newTrip.passengers.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Added Passengers:</Label>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {newTrip.passengers.map((passenger) => (
+                        <div key={passenger.id} className="flex items-center justify-between p-2 border rounded bg-white">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{passenger.name}</p>
+                            <p className="text-xs text-gray-600">{passenger.idProof} • {passenger.phone}</p>
+                          </div>
+                          <Button
+                            onClick={() => removePassenger(passenger.id)}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter>
